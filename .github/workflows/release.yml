@@ -99,8 +99,8 @@ jobs:
           HOMEBREW_NO_INSTALL_UPGRADE: 1
         run: |
           set -euo pipefail
-          brew install curl lua ncurses pkg-config zlib zstd
-          echo "PKG_CONFIG_PATH=$(brew --prefix ncurses)/lib/pkgconfig:${PKG_CONFIG_PATH:-}" >> "${GITHUB_ENV}"
+          brew install curl ncurses pkg-config zlib zstd
+          echo "PKG_CONFIG_PATH=$(brew --prefix ncurses)/lib/pkgconfig" >> "${GITHUB_ENV}"
           echo "CMAKE_PREFIX_PATH=$(brew --prefix ncurses)" >> "${GITHUB_ENV}"
 
       - name: Build release binary
