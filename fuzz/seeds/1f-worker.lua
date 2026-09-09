@@ -1,0 +1,5 @@
+test.describe("fuzz", function(t)
+  t.it("case", function(t)
+    t.assert_eq(1, 1)
+  end)
+end)

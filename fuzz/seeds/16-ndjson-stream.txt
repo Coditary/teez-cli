@@ -1,0 +1,2 @@
+{"event":"pass","id":"worker::demo::ok","duration_ms":1}
+{"event":"fail","id":"worker::demo::bad","message":"boom"}
