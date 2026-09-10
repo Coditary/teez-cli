@@ -99,15 +99,22 @@ jobs:
           HOMEBREW_NO_INSTALL_UPGRADE: 1
         run: |
           set -euo pipefail
-          brew install curl ncurses pkg-config zlib zstd
-          echo "PKG_CONFIG_PATH=$(brew --prefix ncurses)/lib/pkgconfig" >> "${GITHUB_ENV}"
-          echo "CMAKE_PREFIX_PATH=$(brew --prefix ncurses)" >> "${GITHUB_ENV}"
+          brew install curl lua@5.4 ncurses pkg-config zlib zstd
+          LUA_PREFIX="$(brew --prefix lua@5.4)"
+          NCURSES_PREFIX="$(brew --prefix ncurses)"
+          echo "LUA_ROOT=${LUA_PREFIX}" >> "${GITHUB_ENV}"
+          echo "PKG_CONFIG_PATH=${NCURSES_PREFIX}/lib/pkgconfig" >> "${GITHUB_ENV}"
+          echo "CMAKE_PREFIX_PATH=${LUA_PREFIX}:${NCURSES_PREFIX}" >> "${GITHUB_ENV}"
 
       - name: Build release binary
         working-directory: teez-cli
         run: |
           set -euo pipefail
-          cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
+          CMAKE_ARGS=(-DCMAKE_BUILD_TYPE=Release)
+          if [[ "${RUNNER_OS}" == "macOS" ]]; then
+            CMAKE_ARGS+=(-DLua_ROOT="${LUA_ROOT}")
+          fi
+          cmake -B build -S . "${CMAKE_ARGS[@]}"
           cmake --build build -j "$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
 
       - name: Smoke test binary
