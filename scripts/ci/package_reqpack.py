@@ -48,6 +48,28 @@ def copy_runtime_files(binary_path: Path, payload_bin_dir: Path, platform: str) 
     return copied
 
 
+def copy_bundled_plugins(plugins_dir: Path, payload_root: Path) -> None:
+    target_dir = payload_root / "share" / "teez" / "plugins"
+    if target_dir.exists():
+        shutil.rmtree(target_dir)
+    shutil.copytree(plugins_dir, target_dir)
+
+
+def bundle_linux_libraries(binary_path: Path, lib_dir: Path, repo_root: Path) -> None:
+    script = repo_root / "scripts" / "ci" / "bundle_linux_libs.py"
+    subprocess.run(
+        [
+            "python3",
+            str(script),
+            "--binary",
+            str(binary_path),
+            "--lib-dir",
+            str(lib_dir),
+        ],
+        check=True,
+    )
+
+
 def compute_payload_directories(files: list[Path], payload_root: Path) -> list[str]:
     directories: set[PurePosixPath] = set()
     for file_path in files:
@@ -228,13 +250,17 @@ def main() -> int:
     parser.add_argument("--platform", required=True, choices=["linux", "macos"])
     parser.add_argument("--arch", required=True, choices=["x86_64", "aarch64"])
     parser.add_argument("--binary", required=True)
+    parser.add_argument("--plugins-dir", required=True)
     parser.add_argument("--output-dir", required=True)
     args = parser.parse_args()
 
     version = normalized_version(args.version)
     binary_path = Path(args.binary).resolve()
+    plugins_dir = Path(args.plugins_dir).resolve()
     if not binary_path.is_file():
         raise FileNotFoundError(f"binary not found: {binary_path}")
+    if not plugins_dir.is_dir():
+        raise FileNotFoundError(f"plugins dir not found: {plugins_dir}")
 
     repo_root = Path(__file__).resolve().parents[2]
     template_root = repo_root / "packaging" / "reqpack" / "package"
@@ -273,6 +299,9 @@ def main() -> int:
         binary_target = payload_bin_dir / PRODUCT
         shutil.copy2(binary_path, binary_target)
         copy_runtime_files(binary_path, payload_bin_dir, args.platform)
+        copy_bundled_plugins(plugins_dir, payload_root)
+        if args.platform == "linux":
+            bundle_linux_libraries(binary_target, payload_root / "lib", repo_root)
         copy_docs(payload_doc_dir, repo_root)
 
         write_payload_manifest(payload_root, control_scripts_dir / "payload_files.lua")

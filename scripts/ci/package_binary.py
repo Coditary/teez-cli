@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import shutil
+import subprocess
 import tarfile
 from pathlib import Path
 
@@ -26,6 +27,28 @@ def copy_runtime_files(binary_path: Path, stage_bin_dir: Path, platform: str) ->
                 shutil.copy2(runtime_path, stage_bin_dir / runtime_path.name)
 
 
+def copy_bundled_plugins(plugins_dir: Path, stage_root: Path) -> None:
+    target_dir = stage_root / "share" / "teez" / "plugins"
+    if target_dir.exists():
+        shutil.rmtree(target_dir)
+    shutil.copytree(plugins_dir, target_dir)
+
+
+def bundle_linux_libraries(binary_path: Path, lib_dir: Path, repo_root: Path) -> None:
+    script = repo_root / "scripts" / "ci" / "bundle_linux_libs.py"
+    subprocess.run(
+        [
+            "python3",
+            str(script),
+            "--binary",
+            str(binary_path),
+            "--lib-dir",
+            str(lib_dir),
+        ],
+        check=True,
+    )
+
+
 def copy_docs(stage_root: Path, repo_root: Path) -> None:
     readme = repo_root / "README.md"
     if readme.is_file():
@@ -46,13 +69,17 @@ def main() -> int:
     parser.add_argument("--platform", required=True, choices=["linux", "macos"])
     parser.add_argument("--arch", required=True, choices=["x86_64", "aarch64"])
     parser.add_argument("--binary", required=True)
+    parser.add_argument("--plugins-dir", required=True)
     parser.add_argument("--output-dir", required=True)
     args = parser.parse_args()
 
     version = normalized_version(args.version)
     binary_path = Path(args.binary).resolve()
+    plugins_dir = Path(args.plugins_dir).resolve()
     if not binary_path.is_file():
         raise FileNotFoundError(f"binary not found: {binary_path}")
+    if not plugins_dir.is_dir():
+        raise FileNotFoundError(f"plugins dir not found: {plugins_dir}")
 
     repo_root = Path(__file__).resolve().parents[2]
     output_dir = (repo_root / args.output_dir).resolve()
@@ -63,8 +90,12 @@ def main() -> int:
 
     stage_bin_dir = stage_root / "bin"
     stage_bin_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(binary_path, stage_bin_dir / PRODUCT)
+    binary_target = stage_bin_dir / PRODUCT
+    shutil.copy2(binary_path, binary_target)
     copy_runtime_files(binary_path, stage_bin_dir, args.platform)
+    copy_bundled_plugins(plugins_dir, stage_root)
+    if args.platform == "linux":
+        bundle_linux_libraries(binary_target, stage_root / "lib", repo_root)
     copy_docs(stage_root, repo_root)
 
     archive_path = create_archive(stage_root, output_dir, archive_base)

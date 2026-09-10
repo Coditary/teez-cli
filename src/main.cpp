@@ -15,6 +15,7 @@
 #include "teez/core/coverage_reporter.hpp"
 #include "teez/core/discovery.hpp"
 #include "teez/core/exit_code.hpp"
+#include "teez/core/install_paths.hpp"
 #include "teez/core/plugin_config.hpp"
 #include "teez/core/runner.hpp"
 #include "teez/core/signals.hpp"
@@ -232,8 +233,9 @@ int main(int argc, char** argv) {
 
         if (parsed.context.command == "discover") {
             teez::core::set_active_config(std::move(config));
-            return teez::cli::run_discover_command(TEEZ_PLUGIN_DIR, teez::core::active_config(),
-                                                   parsed.context, parsed.project, std::cout);
+            return teez::cli::run_discover_command(teez::core::resolve_bundled_plugins_dir(),
+                                                   teez::core::active_config(), parsed.context,
+                                                   parsed.project, std::cout);
         }
 
         teez::core::set_active_config(std::move(config));
@@ -246,8 +248,8 @@ int main(int argc, char** argv) {
         setenv("TEEZ_UPDATE_SNAPSHOTS", "1", 1);
     }
 
-    const teez::core::DiscoveryContext discovery =
-        teez::core::make_discovery_context(teez::core::active_config(), TEEZ_PLUGIN_DIR);
+    const teez::core::DiscoveryContext discovery = teez::core::make_discovery_context(
+        teez::core::active_config(), teez::core::resolve_bundled_plugins_dir());
     const auto project_paths =
         teez::core::active_config().resolve_project_paths(parsed.context.target_path);
     const auto test_report_options = teez::core::resolve_test_report_cli_overrides(

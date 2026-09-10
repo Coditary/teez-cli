@@ -88,6 +88,7 @@ jobs:
             libcurl4-openssl-dev \
             liblua5.4-dev \
             ninja-build \
+            patchelf \
             pkg-config \
             zlib1g-dev \
             zstd
@@ -132,6 +133,7 @@ jobs:
             --platform "${{ matrix.platform }}" \
             --arch "${{ matrix.arch }}" \
             --binary "${{ matrix.binary_path }}" \
+            --plugins-dir ../teez-core/plugins \
             --output-dir dist
 
       - name: Package ReqPack artifact
@@ -143,6 +145,7 @@ jobs:
             --platform "${{ matrix.platform }}" \
             --arch "${{ matrix.arch }}" \
             --binary "${{ matrix.binary_path }}" \
+            --plugins-dir ../teez-core/plugins \
             --output-dir dist
 
       - name: Upload release artifact
@@ -188,6 +191,7 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           NOTES="Automated release for teez ${VERSION}.
 
+          Linux packages bundle curl/ncurses dependencies and ship teez-core plugins under share/teez/plugins.
           Includes tar.gz binaries and ReqPack .rqp packages for Linux and macOS (x86_64 and aarch64), plus index.json for ReqPack repositories."
           if ! gh release view "$GITHUB_REF_NAME" --repo "$GH_REPO" >/dev/null 2>&1; then
             gh release create "$GITHUB_REF_NAME" --repo "$GH_REPO" --title "teez ${VERSION}" --notes "$NOTES"
