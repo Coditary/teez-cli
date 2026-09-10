@@ -9,7 +9,11 @@
 #include "teez/cli/run_output.hpp"
 
 #ifdef TEEZ_ENABLE_UI
+#if defined(__APPLE__)
+#include <util.h>
+#else
 #include <pty.h>
+#endif
 #include <unistd.h>
 #endif
 
