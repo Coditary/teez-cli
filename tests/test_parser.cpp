@@ -212,6 +212,13 @@ TEST_CASE("parse_args accepts global profile flag", "[parser]") {
     REQUIRE(result.profile == "ci");
 }
 
+TEST_CASE("parse_args accepts profile flag after subcommand", "[parser]") {
+    const auto result = teez::cli::parse_args({"teez", "run", ".", "--profile", "ci"});
+
+    REQUIRE(result.ok);
+    REQUIRE(result.profile == "ci");
+}
+
 TEST_CASE("parse_args accepts run report flags", "[parser]") {
     const auto result = teez::cli::parse_args(
         {"teez", "run", ".", "--report", "junit", "--report-output", "out/report.xml"});

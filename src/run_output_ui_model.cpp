@@ -80,20 +80,43 @@ std::string format_active_label(const std::string& id, const std::string& phase)
     return "  ◌ " + label + " · " + phase;
 }
 
-std::string format_duration_seconds(double seconds) {
+std::string format_elapsed_seconds(double seconds) {
+    if (seconds < 0.0) {
+        return {};
+    }
+    if (seconds < 1.0) {
+        return std::to_string(static_cast<long long>(seconds * 1000.0 + 0.5)) + "ms";
+    }
+    if (seconds < 60.0) {
+        std::ostringstream out;
+        out << std::fixed << std::setprecision(2) << seconds << 's';
+        return out.str();
+    }
+    if (seconds < 3600.0) {
+        const auto total = static_cast<long long>(seconds);
+        const long long minutes = total / 60;
+        const long long secs = total % 60;
+        std::ostringstream out;
+        out << minutes << ':' << std::setfill('0') << std::setw(2) << secs;
+        return out.str();
+    }
+
+    const auto total = static_cast<long long>(seconds);
+    const long long hours = total / 3600;
+    const long long minutes = (total % 3600) / 60;
+    const long long secs = total % 60;
     std::ostringstream out;
-    out << std::fixed << std::setprecision(2) << seconds << 's';
+    out << hours << ':' << std::setfill('0') << std::setw(2) << minutes << ':' << std::setw(2)
+        << secs;
     return out.str();
 }
 
+std::string format_duration_seconds(double seconds) {
+    return format_elapsed_seconds(seconds);
+}
+
 std::string format_test_duration_ms(double milliseconds) {
-    if (milliseconds < 0.0) {
-        return {};
-    }
-    if (milliseconds < 1000.0) {
-        return std::to_string(static_cast<long long>(milliseconds + 0.5)) + "ms";
-    }
-    return format_duration_seconds(milliseconds / 1000.0);
+    return format_elapsed_seconds(milliseconds / 1000.0);
 }
 
 std::string format_coverage_percent(double rate) {

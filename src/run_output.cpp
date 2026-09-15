@@ -141,10 +141,12 @@ void RunOutputWriter::write_human_event(const nlohmann::json& event) {
     }
 
     const std::string id = event.value("id", "");
-    const std::string suite = id.empty() ? std::string{} : id.substr(0, id.find("::"));
-    if (!suite.empty() && suite != current_suite_) {
-        current_suite_ = suite;
-        out_ << '\n' << colorize(suite, kDim, colors_) << '\n';
+    if (const auto sep = id.find("::"); sep != std::string::npos) {
+        const std::string suite = id.substr(0, sep);
+        if (!suite.empty() && suite != current_suite_) {
+            current_suite_ = suite;
+            out_ << '\n' << colorize(suite, kDim, colors_) << '\n';
+        }
     }
 
     if (type == "pass") {

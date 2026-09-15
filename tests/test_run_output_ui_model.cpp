@@ -172,6 +172,9 @@ TEST_CASE("format helpers render stable duration and coverage text", "[run_outpu
     REQUIRE(teez::cli::format_duration_seconds(1.2) == "1.20s");
     REQUIRE(teez::cli::format_test_duration_ms(12) == "12ms");
     REQUIRE(teez::cli::format_test_duration_ms(1500) == "1.50s");
+    REQUIRE(teez::cli::format_elapsed_seconds(90) == "1:30");
+    REQUIRE(teez::cli::format_elapsed_seconds(3661) == "1:01:01");
+    REQUIRE(teez::cli::format_elapsed_seconds(360905) == "100:15:05");
     REQUIRE(teez::cli::format_coverage_percent(0.5) == "50.00%");
 
     const auto noon = std::chrono::system_clock::from_time_t(0);

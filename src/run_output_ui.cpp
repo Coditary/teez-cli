@@ -2,8 +2,11 @@
 
 #include <nlohmann/json.hpp>
 
+#include <atomic>
 #include <cstdio>
 #include <memory>
+#include <mutex>
+#include <thread>
 
 #include "teez/cli/run_output_ui_model.hpp"
 
@@ -98,8 +101,40 @@ bool live_ui_available() {
 
 struct LiveUiReporter::Impl {
     ~Impl() {
+        stop_tick_thread();
         if (!state_.finished()) {
             finish();
+        }
+    }
+
+    void start_tick_thread() {
+        bool expected = false;
+        if (!tick_active_.compare_exchange_strong(expected, true)) {
+            return;
+        }
+
+        tick_thread_ = std::thread([this] {
+            while (tick_active_) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(250));
+                if (!tick_active_) {
+                    break;
+                }
+
+                std::lock_guard lock(mutex_);
+                if (state_.finished() || view == nullptr) {
+                    continue;
+                }
+
+                view->set_root(build_footer_root(state_));
+                view->present();
+            }
+        });
+    }
+
+    void stop_tick_thread() {
+        tick_active_ = false;
+        if (tick_thread_.joinable()) {
+            tick_thread_.join();
         }
     }
 
@@ -129,11 +164,12 @@ struct LiveUiReporter::Impl {
     }
 
     void before_scroll_output() {
+        std::lock_guard lock(mutex_);
         state_.set_test_output_started();
         suspend_footer();
     }
 
-    void present_footer() {
+    void present_footer_unlocked() {
         if (!state_.should_paint_footer()) {
             return;
         }
@@ -148,11 +184,17 @@ struct LiveUiReporter::Impl {
             view->set_root(build_footer_root(state_));
             tuinator::flush_cli_output();
             view->start();
+            start_tick_thread();
             return;
         }
 
         view->set_root(build_footer_root(state_));
         view->present();
+    }
+
+    void present_footer() {
+        std::lock_guard lock(mutex_);
+        present_footer_unlocked();
     }
 
     void on_event(const nlohmann::json& event) {
@@ -167,15 +209,23 @@ struct LiveUiReporter::Impl {
 
         const std::string id = event.value("id", "");
 
+        std::lock_guard lock(mutex_);
+
+        if (type == "start") {
+            state_.on_phase(id, "run", "start");
+            present_footer_unlocked();
+            return;
+        }
+
         if (type == "phase") {
             state_.on_phase(id, event.value("phase", ""), event.value("state", ""));
-            present_footer();
+            present_footer_unlocked();
             return;
         }
 
         if (type == "coverage") {
             state_.on_coverage(event);
-            present_footer();
+            present_footer_unlocked();
             return;
         }
 
@@ -184,7 +234,7 @@ struct LiveUiReporter::Impl {
             state_.on_result(id, type);
         }
 
-        present_footer();
+        present_footer_unlocked();
     }
 
     void detach_footer_keep_visible() {
@@ -198,6 +248,9 @@ struct LiveUiReporter::Impl {
     }
 
     void finish() {
+        stop_tick_thread();
+
+        std::lock_guard lock(mutex_);
         if (state_.finished()) {
             return;
         }
@@ -208,12 +261,15 @@ struct LiveUiReporter::Impl {
             return;
         }
 
-        present_footer();
+        present_footer_unlocked();
         detach_footer_keep_visible();
     }
 
     FooterState state_;
     std::unique_ptr<tuinator::InlineView> view;
+    std::mutex mutex_;
+    std::atomic<bool> tick_active_{false};
+    std::thread tick_thread_;
 };
 
 std::string capture_footer_ansi(const FooterState& state) {

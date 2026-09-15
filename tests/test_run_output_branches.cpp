@@ -95,6 +95,17 @@ TEST_CASE("RunOutputWriter human output uses path and arrow label fallbacks", "[
     REQUIRE(output.find("plain-name") != std::string::npos);
 }
 
+TEST_CASE("RunOutputWriter human output shows ctest duration from plugin", "[run_output][branches]") {
+    const auto output = capture_events(
+        {},
+        {{{"event", "pass"},
+          {"id", "run_command_streaming captures stdout lines"},
+          {"duration_ms", 420}}});
+
+    REQUIRE(output.find("420ms") != std::string::npos);
+    REQUIRE(output.find("run_command_streaming captures stdout lines") != std::string::npos);
+}
+
 TEST_CASE("RunOutputWriter human output shows per-test duration", "[run_output][branches]") {
     const auto output = capture_events(
         {},

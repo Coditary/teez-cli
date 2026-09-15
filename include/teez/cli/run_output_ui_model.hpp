@@ -35,6 +35,7 @@ std::string stat_label(std::string_view text);
 
 std::string short_test_label(const std::string& id);
 std::string format_active_label(const std::string& id, const std::string& phase);
+std::string format_elapsed_seconds(double seconds);
 std::string format_duration_seconds(double seconds);
 std::string format_test_duration_ms(double milliseconds);
 std::string format_coverage_percent(double rate);

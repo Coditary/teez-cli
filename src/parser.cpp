@@ -52,6 +52,12 @@ void apply_ctest_filters(teez::core::RunContext& context, const CtestFilterBindi
     context.ctest.exclude_label = filters.exclude_label;
 }
 
+void add_profile_option(CLI::App* cmd, std::optional<std::string>& profile) {
+    cmd->add_option(
+        "--profile", profile,
+        "Active config profile (overrides teez.config.lua profile; same as global --profile)");
+}
+
 void apply_test_filters(teez::core::RunContext& context, const TestFilterBindings& filters) {
     context.filters.file_regex = filters.file;
     context.filters.types = filters.types;
@@ -138,6 +144,7 @@ ParseResult parse_args(int argc, char** argv) {
                  "Update golden snapshot files for worker tests");
 
     auto* run_cmd = app.add_subcommand("run", "Run tests in a directory");
+    add_profile_option(run_cmd, profile_name);
     run_cmd->add_option("path", target_path, "Target directory (defaults to current directory)");
     add_ctest_filter_options(run_cmd, ctest_filters);
     add_test_filter_options(run_cmd, test_filters);
@@ -161,6 +168,7 @@ ParseResult parse_args(int argc, char** argv) {
     run_cmd->add_option("--report-output", report_output, "Destination file for --report");
 
     auto* list_cmd = app.add_subcommand("list", "List discovered tests without running them");
+    add_profile_option(list_cmd, profile_name);
     list_cmd->add_option("path", target_path, "Target directory (defaults to current directory)");
     add_ctest_filter_options(list_cmd, ctest_filters);
     add_test_filter_options(list_cmd, test_filters);
@@ -171,6 +179,7 @@ ParseResult parse_args(int argc, char** argv) {
 
     auto* coverage_cmd =
         app.add_subcommand("coverage", "Export a coverage report to another format");
+    add_profile_option(coverage_cmd, profile_name);
     coverage_cmd->add_option(
         "path", target_path,
         "Project directory for teez.config.lua (defaults to current directory)");
@@ -190,12 +199,14 @@ ParseResult parse_args(int argc, char** argv) {
 
     auto* discover_cmd =
         app.add_subcommand("discover", "Show which plugin and commands teez would use for a path");
+    add_profile_option(discover_cmd, profile_name);
     discover_cmd->add_option("path", target_path,
                              "Target directory (defaults to current directory)");
     bool discover_json = false;
     discover_cmd->add_flag("--json", discover_json, "Emit machine-readable JSON");
 
     auto* config_cmd = app.add_subcommand("config", "Show or validate teez.config.lua");
+    add_profile_option(config_cmd, profile_name);
     config_cmd->add_option("path", target_path, "Target directory (defaults to current directory)");
     bool config_validate = false;
     bool config_json = false;

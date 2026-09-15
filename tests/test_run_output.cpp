@@ -41,6 +41,16 @@ TEST_CASE("RunOutputWriter emits aggregated JSON with --json only", "[run_output
     REQUIRE(json.at("summary").at("total") == 2);
 }
 
+TEST_CASE("RunOutputWriter does not duplicate flat ctest ids as suite headers", "[run_output]") {
+    const auto output = capture_events({},
+                                       {{{"event", "pass"}, {"id", "run_command_streaming captures stdout lines"}}});
+
+    REQUIRE(output.find("run_command_streaming captures stdout lines") != std::string::npos);
+    const auto first = output.find("run_command_streaming captures stdout lines");
+    const auto second = output.find("run_command_streaming captures stdout lines", first + 1);
+    REQUIRE(second == std::string::npos);
+}
+
 TEST_CASE("RunOutputWriter renders human output by default", "[run_output]") {
     const auto output = capture_events({},
                                        {{{"event", "start"}, {"id", "suite::test_one"}},
